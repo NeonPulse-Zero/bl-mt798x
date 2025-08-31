@@ -1,0 +1,73 @@
+name: Uboot Ubuntu CI Build
+run-name: Uboot - ${{ inputs.board }} (${{ inputs.soc }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      soc:
+        required: true
+        description: SOC/CPU Model
+        type: string
+        default: mt7981
+        options:
+          - 'mt7981'
+          - 'mt7986'
+      board:
+        required: true
+        description: Router Model Name
+        type: string
+        default: netcore_n60-pro
+        options:
+          - '360t7'
+          - 'livinet_zr-3020'
+          - 'cetron_ct3003'
+          - 'jcg_q30'
+          - 'konka_komi-a31'
+          - 'wr30u'
+          - 'imou_lc-hx3001'
+          - 'clt_r30b1'
+      multi-layout:
+        required: true
+        description: Enable Multiple Flash Layout Support
+        type: choice
+        default: '1'
+        options:
+          - '0'
+          - '1'
+
+jobs:
+  build:
+    name: Uboot - ${{ inputs.board }} (${{ inputs.soc }})
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get build dept.
+        run: |
+          sudo apt update
+          sudo apt install gcc-aarch64-linux-gnu build-essential flex bison libssl-dev
+
+      - name: Build it
+        run: |
+          ./build.sh
+        env:
+          SOC: ${{ inputs.soc }}
+          BOARD: ${{ inputs.board }}
+          MULTI_LAYOUT: ${{ inputs.multi-layout }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Uboot - ${{ inputs.board }} (${{ inputs.soc }})
+          path: output/*.bin
+          
+      - name: Create release
+        uses: ncipollo/release-action@v1
+        with:
+          name: ${{ inputs.soc }}
+          allowUpdates: true
+          tag: ${{ env.latest_release }}
+          commit: master
+          replacesArtifacts: true
+          token: ${{ inputs.soc }}
+          artifacts: output/*.bin
+    
